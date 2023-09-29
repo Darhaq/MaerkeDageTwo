@@ -1,0 +1,123 @@
+﻿@page "/birthday"
+@using MaerkeDageTwo
+@using MaerkeDageTwo.Services
+
+<h2>Birthday Management</h2>
+
+<div>
+    <!-- Birthday Form -->
+    <form @onsubmit="CreateBirthday">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input id="name" class="form-control" @bind="newBirthday.Name" />
+        </div>
+        <div class="form-group">
+            <label for="dateOfBirth">Date of Birth:</label>
+            <input id="dateOfBirth" type="date" class="form-control" @bind="newBirthday.DateOfBirth" />
+        </div>
+        <button type="submit" class="btn btn-primary">Add Birthday</button>
+    </form>
+</div>
+
+<div>
+    <!-- List of Birthdays -->
+    <h3>Birthdays</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Date of Birth</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var birthday in birthdays)
+            {
+                <tr>
+                    <td>@birthday.Name</td>
+                    <td>@birthday.DateOfBirth.ToShortDateString()</td>
+                    <td>
+                        <button class="btn btn-info" @onclick="() => EditBirthday(birthday)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteBirthday(birthday)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Edit Birthday Modal -->
+<div class="modal" style="display: @(isModalVisible ? "block" : "none")">
+    <div class="modal-content">
+        <span class="close" @onclick="CloseModal">&times;</span>
+        <h4>Edit Birthday</h4>
+        <div class="form-group">
+            <label for="editName">Name:</label>
+            <input id="editName" class="form-control" @bind="editedBirthday.Name" />
+        </div>
+        <div class="form-group">
+            <label for="editDateOfBirth">Date of Birth:</label>
+            <input id="editDateOfBirth" type="date" class="form-control" @bind="editedBirthday.DateOfBirth" />
+        </div>
+        <button class="btn btn-primary" @onclick="UpdateBirthday">Save Changes</button>
+    </div>
+</div>
+
+@code {
+    private Birthday newBirthday = new Birthday();
+    private List<Birthday> birthdays = new List<Birthday>();
+    private bool isModalVisible = false; // Controls the display of the edit modal
+    private Birthday editedBirthday = new Birthday(); // Represents the birthday being edited
+
+    [Inject]
+    private BirthdayService birthdayService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch and load the list of birthdays when the component initializes
+        birthdays = await birthdayService.GetBirthdaysAsync();
+    }
+
+    // Handle form submission to create a new birthday
+    private async Task CreateBirthday()
+    {
+        await birthdayService.CreateBirthdayAsync(newBirthday);
+        birthdays = await birthdayService.GetBirthdaysAsync(); // Refresh the list
+        newBirthday = new Birthday(); // Clear the form
+    }
+
+    // Handle editing an existing birthday
+    private void EditBirthday(Birthday birthday)
+    {
+        editedBirthday = new Birthday
+        {
+            ID = birthday.ID,
+            Name = birthday.Name,
+            DateOfBirth = birthday.DateOfBirth
+        };
+
+        isModalVisible = true; // Display the edit modal
+    }
+
+    // Handle closing the edit modal
+    private void CloseModal()
+    {
+        isModalVisible = false; // Hide the edit modal
+        editedBirthday = new Birthday(); // Clear the editedBirthday object
+    }
+
+    // Handle updating an existing birthday
+    private async Task UpdateBirthday()
+    {
+        await birthdayService.UpdateBirthdayAsync(editedBirthday);
+        birthdays = await birthdayService.GetBirthdaysAsync(); // Refresh the list
+        CloseModal(); // Close the edit modal after saving changes
+    }
+
+    // Handle deleting a birthday
+    private async Task DeleteBirthday(Birthday birthday)
+    {
+        await birthdayService.DeleteBirthdayAsync(birthday.ID);
+        birthdays = await birthdayService.GetBirthdaysAsync(); // Refresh the list
+    }
+}

@@ -1,0 +1,99 @@
+﻿@page "/"
+@using System.Net.Http
+@using System.Text.Json
+
+<h1>Maerkedage</h1>
+
+<div class="kalender">
+    @foreach (var year in Enumerable.Range(DateTime.Now.Year, 1))
+    {
+        <div class="year">
+            <h2>@year</h2>
+            <ul>
+                @foreach (var maerkedag in danskeMaerkeDage)
+                {
+                    <li>@maerkedag.LocalName: @maerkedag.Date.ToShortDateString()</li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+
+@code {
+    private List<PublicHoliday> danskeMaerkeDage = new List<PublicHoliday>();
+    private HttpClient httpClient = new HttpClient();
+    private JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+
+    // Metode til at hente danske mærkedage fra API'en
+    private async Task FetchDanishAnniversariesAsync()
+    {
+        try
+        {
+            var apiUrl = "https://date.nager.at/api/v3/publicholidays/2023/DK"; // Juster årstal og landekode efter behov
+            var response = await httpClient.GetAsync(apiUrl);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonStream = await response.Content.ReadAsStreamAsync();
+                danskeMaerkeDage = await JsonSerializer.DeserializeAsync<List<PublicHoliday>>(jsonStream, jsonSerializerOptions);
+            }
+            else
+            {
+                Console.WriteLine("Kunne ikke hente mærkedagsdata. Prøv venligst igen.");
+            }
+        }
+        catch (Exception ex)
+        {
+                Console.WriteLine("Der opstod en fejl under hentning af mærkedagsdata. Prøv venligst igen.");
+                Console.WriteLine(ex.ToString());
+        }
+    }
+
+    // Kald FetchDanishAnniversariesAsync-metoden for at hente data, når komponenten initialiseres. 
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchDanishAnniversariesAsync();
+    }
+
+    // Defineret klasse til at repræsentere API 
+    public class PublicHoliday
+    {
+        public DateTime Date { get; set; }
+        public string LocalName { get; set; }
+        public string Name { get; set; }
+        public string CountryCode { get; set; }
+        public bool Fixed { get; set; }
+        public bool Global { get; set; }
+        public string[] Counties { get; set; }
+        public int? LaunchYear { get; set; }
+        public string[] Types { get; set; }
+    }
+}
+
+<style>
+    .kalender {
+        text-align: center;
+        font-size: 18px;
+        margin-top: 20px;
+    }
+
+    .year {
+        border: 2px solid #333;
+        margin: 20px;
+        padding: 10px;
+        background-color: #f2f2f2;
+    }
+
+    ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    li {
+        font-size: 16px;
+        margin-top: 5px;
+    }
+</style>
+
+
